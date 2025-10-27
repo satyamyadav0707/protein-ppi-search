@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -78,21 +78,25 @@
             font-size: 16px;
             cursor: pointer;
             transition: transform 0.2s;
+            font-weight: 600;
         }
 
         #searchButton:hover {
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         #searchButton:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
 
         .info-text {
             color: #666;
             font-size: 14px;
             margin-top: 10px;
+            line-height: 1.5;
         }
 
         .loading {
@@ -123,22 +127,28 @@
 
         .result-count {
             margin-bottom: 20px;
-            color: #666;
+            padding: 15px;
+            background: #e8eaf6;
+            border-radius: 8px;
+            color: #667eea;
             font-size: 18px;
+            font-weight: 600;
         }
 
         .uniprot-link {
             color: #667eea;
             text-decoration: none;
             font-weight: 600;
-            padding: 2px 6px;
+            padding: 4px 8px;
             border-radius: 4px;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            display: inline-block;
         }
 
         .uniprot-link:hover {
             background-color: #e8eaf6;
             text-decoration: underline;
+            transform: translateY(-1px);
         }
 
         .external-icon {
@@ -146,40 +156,57 @@
             margin-left: 3px;
         }
 
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
         }
 
         thead {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         th {
-            padding: 15px;
+            padding: 15px 12px;
             text-align: left;
             font-weight: 600;
+            font-size: 14px;
         }
 
         td {
-            padding: 12px 15px;
+            padding: 12px;
             border-bottom: 1px solid #eee;
+            font-size: 13px;
         }
 
-        tr:hover {
+        tbody tr:hover {
             background-color: #f8f9fa;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
         }
 
         .no-results {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
             color: #999;
             font-size: 18px;
+        }
+
+        .no-results-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
         }
 
         .error-message {
@@ -193,16 +220,25 @@
 
         .success-message {
             background-color: #efe;
-            color: #3a3;
+            color: #2d7a2d;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border-left: 4px solid #3a3;
+            border-left: 4px solid #4caf50;
+        }
+
+        .info-message {
+            background-color: #e8eaf6;
+            color: #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
         }
 
         .gene-info {
-            background-color: #e8eaf6;
-            padding: 15px;
+            background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%);
+            padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
             border-left: 4px solid #667eea;
@@ -211,13 +247,45 @@
         .gene-info strong {
             color: #667eea;
         }
+
+        .gene-info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .gene-info-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .highlight-cell {
+            background-color: #fff3cd !important;
+            font-weight: 600;
+        }
+
+        .score-high {
+            color: #2d7a2d;
+            font-weight: 600;
+        }
+
+        .score-medium {
+            color: #f57c00;
+            font-weight: 600;
+        }
+
+        .score-low {
+            color: #c33;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🧬 Protein-Protein Interaction Search</h1>
-            <p>Search by Gene Name or UniProt ID</p>
+            <p>Discover protein interactions with confidence scores</p>
         </div>
 
         <div class="search-section">
@@ -228,11 +296,14 @@
                     placeholder="Enter gene name (e.g., TP53, BRCA1) or UniProt ID (e.g., P04637)"
                     autocomplete="off"
                 />
-                <button id="searchButton">Search</button>
+                <button id="searchButton">🔍 Search</button>
             </div>
             <div class="info-text">
-                💡 Tip: You can search using either gene names (like TP53) or UniProt IDs (like P04637). 
-                The tool will automatically convert gene names to UniProt IDs and link results to UniProt database.
+                💡 <strong>How it works:</strong> Enter a gene name or UniProt ID. The tool will automatically:
+                <br>• Convert gene names to UniProt IDs using the UniProt database
+                <br>• Find all protein-protein interactions involving your protein
+                <br>• Display interaction confidence scores and detailed information
+                <br>• Provide direct links to UniProt for all proteins
             </div>
         </div>
 
@@ -240,7 +311,7 @@
             <div id="messageBox"></div>
             <div id="geneInfo"></div>
             <div id="resultCount" class="result-count"></div>
-            <div id="resultsTable"></div>
+            <div class="table-container" id="resultsTable"></div>
         </div>
     </div>
 
@@ -273,9 +344,9 @@
                         return obj;
                     });
                 
-                console.log('✅ Data loaded:', proteinData.length, 'interactions');
-                console.log('✅ Columns:', headers);
-                console.log('✅ Sample row:', proteinData[0]);
+                console.log('✅ Data loaded successfully!');
+                console.log('📊 Total interactions:', proteinData.length);
+                console.log('📋 Columns:', headers);
             } catch (error) {
                 console.error('❌ Error loading data:', error);
                 showMessage('Error loading data file. Please ensure candidate_predictions_combined.tsv is in the same directory.', 'error');
@@ -295,14 +366,12 @@
                 const data = await response.json();
                 
                 if (data.results && data.results.length > 0) {
-                    const uniprotId = data.results[0].primaryAccession;
-                    const geneName = data.results[0].genes?.[0]?.geneName?.value || '';
-                    const proteinName = data.results[0].proteinDescription?.recommendedName?.fullName?.value || '';
-                    
+                    const result = data.results[0];
                     return {
-                        uniprotId: uniprotId,
-                        geneName: geneName,
-                        proteinName: proteinName,
+                        uniprotId: result.primaryAccession,
+                        geneName: result.genes?.[0]?.geneName?.value || geneName,
+                        proteinName: result.proteinDescription?.recommendedName?.fullName?.value || 'Unknown protein',
+                        organism: 'Homo sapiens (Human)',
                         found: true
                     };
                 }
@@ -320,17 +389,30 @@
             return uniprotPattern.test(input.toUpperCase());
         }
 
-        // Check if a string looks like a UniProt ID (for linking in results)
+        // Check if a string looks like a UniProt ID
         function looksLikeUniProtID(str) {
             if (!str || str.length < 6 || str.length > 10) return false;
-            const uniprotPattern = /^[A-Z][0-9][A-Z0-9]{3,8}$/;
-            return uniprotPattern.test(str.toUpperCase());
+            return /^[A-Z][0-9][A-Z0-9]{3,8}$/.test(str.toUpperCase());
         }
 
         // Create UniProt link
-        function createUniProtLink(uniprotId) {
+        function createUniProtLink(uniprotId, highlight = false) {
             if (!uniprotId || !looksLikeUniProtID(uniprotId)) return uniprotId || 'N/A';
-            return `<a href="https://www.uniprot.org/uniprotkb/${uniprotId}" target="_blank" class="uniprot-link">${uniprotId}<span class="external-icon">↗</span></a>`;
+            const className = highlight ? 'uniprot-link highlight-cell' : 'uniprot-link';
+            return `<a href="https://www.uniprot.org/uniprotkb/${uniprotId}" target="_blank" class="${className}">${uniprotId}<span class="external-icon">↗</span></a>`;
+        }
+
+        // Format score with color coding
+        function formatScore(score) {
+            if (!score || score === '') return 'N/A';
+            const numScore = parseFloat(score);
+            if (isNaN(numScore)) return score;
+            
+            let className = 'score-low';
+            if (numScore >= 0.7) className = 'score-high';
+            else if (numScore >= 0.4) className = 'score-medium';
+            
+            return `<span class="${className}">${numScore.toFixed(4)}</span>`;
         }
 
         // Search function
@@ -349,94 +431,130 @@
 
             const searchButton = document.getElementById('searchButton');
             searchButton.disabled = true;
-            searchButton.textContent = 'Searching...';
+            searchButton.textContent = '🔍 Searching...';
 
             document.getElementById('resultsSection').style.display = 'block';
-            document.getElementById('resultsTable').innerHTML = '<div class="loading"><div class="spinner"></div>Loading results...</div>';
+            document.getElementById('resultsTable').innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching for interactions...</p></div>';
             document.getElementById('messageBox').innerHTML = '';
             document.getElementById('geneInfo').innerHTML = '';
 
-            let searchId = searchTerm;
+            let searchUniProtId = searchTerm.toUpperCase();
             let geneInfo = null;
 
             // If not a UniProt ID, try to convert gene name to UniProt ID
             if (!isUniProtID(searchTerm)) {
-                showMessage('Looking up UniProt ID for gene: ' + searchTerm + '...', 'info');
+                showMessage(`🔍 Looking up UniProt ID for gene: <strong>${searchTerm}</strong>`, 'info');
                 geneInfo = await geneToUniProt(searchTerm);
                 
                 if (geneInfo.found) {
-                    searchId = geneInfo.uniprotId;
+                    searchUniProtId = geneInfo.uniprotId;
+                    
                     document.getElementById('geneInfo').innerHTML = `
                         <div class="gene-info">
-                            <strong>Gene Found:</strong> ${geneInfo.geneName} → 
-                            <a href="https://www.uniprot.org/uniprotkb/${geneInfo.uniprotId}" target="_blank" class="uniprot-link">
-                                ${geneInfo.uniprotId}<span class="external-icon">↗</span></a><br>
-                            <strong>Protein:</strong> ${geneInfo.proteinName}
+                            <div style="font-size: 18px; margin-bottom: 15px;">
+                                <strong>✅ Gene Found!</strong>
+                            </div>
+                            <div class="gene-info-grid">
+                                <span class="gene-info-label">Gene Name:</span>
+                                <span>${geneInfo.geneName}</span>
+                                
+                                <span class="gene-info-label">UniProt ID:</span>
+                                <span><a href="https://www.uniprot.org/uniprotkb/${geneInfo.uniprotId}" target="_blank" class="uniprot-link">${geneInfo.uniprotId}<span class="external-icon">↗</span></a></span>
+                                
+                                <span class="gene-info-label">Protein Name:</span>
+                                <span>${geneInfo.proteinName}</span>
+                                
+                                <span class="gene-info-label">Organism:</span>
+                                <span>${geneInfo.organism}</span>
+                            </div>
                         </div>
                     `;
-                    showMessage(`Gene "${searchTerm}" mapped to UniProt ID: ${geneInfo.uniprotId}`, 'success');
+                    showMessage(`✅ Successfully mapped gene "${searchTerm}" to UniProt ID: ${geneInfo.uniprotId}`, 'success');
                 } else {
-                    showMessage(`Could not find UniProt ID for gene "${searchTerm}". Searching with original term...`, 'info');
+                    showMessage(`⚠️ Could not find UniProt ID for gene "${searchTerm}". Searching with original term...`, 'error');
                 }
+            } else {
+                showMessage(`🔍 Searching for UniProt ID: <strong>${searchUniProtId}</strong>`, 'info');
             }
 
-            // Search in the data - check Protein1, Protein2, Name1, Name2 columns
-            const searchUpper = searchId.toUpperCase();
+            // Search in the data - find all interactions where the protein appears in EITHER Protein1 OR Protein2
             const results = proteinData.filter(row => {
                 const protein1 = (row.Protein1 || '').toUpperCase();
                 const protein2 = (row.Protein2 || '').toUpperCase();
-                const name1 = (row.Name1 || '').toUpperCase();
-                const name2 = (row.Name2 || '').toUpperCase();
                 
-                return protein1 === searchUpper || 
-                       protein2 === searchUpper ||
-                       name1 === searchUpper ||
-                       name2 === searchUpper;
+                // Match exact UniProt ID in either column
+                return protein1 === searchUniProtId || protein2 === searchUniProtId;
             });
 
-            console.log('🔍 Searching for:', searchId);
-            console.log('📊 Results found:', results.length);
+            console.log('🔍 Searching for UniProt ID:', searchUniProtId);
+            console.log('📊 Total interactions found:', results.length);
             
-            displayResults(results, searchId);
+            displayResults(results, searchUniProtId);
 
             searchButton.disabled = false;
-            searchButton.textContent = 'Search';
+            searchButton.textContent = '🔍 Search';
         }
 
         // Display results
-        function displayResults(results, searchTerm) {
+        function displayResults(results, searchUniProtId) {
             const resultCount = document.getElementById('resultCount');
             const resultsTable = document.getElementById('resultsTable');
 
             if (results.length === 0) {
-                resultsTable.innerHTML = `<div class="no-results">No interactions found for "${searchTerm}".</div>`;
+                resultsTable.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">🔬</div>
+                        <strong>No interactions found for UniProt ID: ${searchUniProtId}</strong>
+                        <p style="margin-top: 10px; color: #666;">
+                            This protein may not have any predicted interactions in the database,<br>
+                            or the ID might not be present in the dataset.
+                        </p>
+                    </div>
+                `;
                 resultCount.textContent = '';
                 return;
             }
 
-            resultCount.textContent = `Found ${results.length} interaction${results.length > 1 ? 's' : ''} for "${searchTerm}"`;
+            resultCount.innerHTML = `
+                🎯 Found <strong>${results.length}</strong> interaction${results.length > 1 ? 's' : ''} 
+                for UniProt ID: <strong>${searchUniProtId}</strong>
+            `;
 
             // Get column headers from first result
             const headers = Object.keys(results[0]);
 
+            // Create table
             let tableHTML = '<table><thead><tr>';
             headers.forEach(header => {
-                const displayHeader = header.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                const displayHeader = header.replace(/([A-Z])/g, ' $1').trim();
                 tableHTML += `<th>${displayHeader}</th>`;
             });
             tableHTML += '</tr></thead><tbody>';
 
+            // Add rows
             results.forEach(row => {
                 tableHTML += '<tr>';
                 headers.forEach(header => {
                     let value = row[header];
+                    const isSearchedProtein1 = header === 'Protein1' && value.toUpperCase() === searchUniProtId;
+                    const isSearchedProtein2 = header === 'Protein2' && value.toUpperCase() === searchUniProtId;
                     
-                    // Make Protein1 and Protein2 clickable
-                    if ((header === 'Protein1' || header === 'Protein2') && value) {
-                        value = createUniProtLink(value);
+                    // Format protein columns with links and highlighting
+                    if (header === 'Protein1' || header === 'Protein2') {
+                        const isHighlight = isSearchedProtein1 || isSearchedProtein2;
+                        const cellClass = isHighlight ? ' class="highlight-cell"' : '';
+                        value = createUniProtLink(value, isHighlight);
+                        tableHTML += `<td${cellClass}>${value}</td>`;
                     }
-                    
-                    tableHTML += `<td>${value}</td>`;
+                    // Format score columns
+                    else if (header.toLowerCase().includes('prob') || header.toLowerCase().includes('score')) {
+                        value = formatScore(value);
+                        tableHTML += `<td>${value}</td>`;
+                    }
+                    // Regular columns
+                    else {
+                        tableHTML += `<td>${value}</td>`;
+                    }
                 });
                 tableHTML += '</tr>';
             });
@@ -448,9 +566,10 @@
         // Show message
         function showMessage(message, type) {
             const messageBox = document.getElementById('messageBox');
-            const className = type === 'error' ? 'error-message' : 
-                             type === 'success' ? 'success-message' : 
-                             'gene-info';
+            let className = 'info-message';
+            if (type === 'error') className = 'error-message';
+            else if (type === 'success') className = 'success-message';
+            
             messageBox.innerHTML = `<div class="${className}">${message}</div>`;
         }
 
