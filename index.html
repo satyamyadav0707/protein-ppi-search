@@ -211,16 +211,6 @@
         .gene-info strong {
             color: #667eea;
         }
-
-        .debug-info {
-            background-color: #fff3cd;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            color: #856404;
-            border-left: 4px solid #ffc107;
-        }
     </style>
 </head>
 <body>
@@ -242,13 +232,12 @@
             </div>
             <div class="info-text">
                 💡 Tip: You can search using either gene names (like TP53) or UniProt IDs (like P04637). 
-                The tool will automatically convert gene names to UniProt IDs.
+                The tool will automatically convert gene names to UniProt IDs and link results to UniProt database.
             </div>
         </div>
 
         <div class="results-section" id="resultsSection" style="display:none;">
             <div id="messageBox"></div>
-            <div id="debugInfo"></div>
             <div id="geneInfo"></div>
             <div id="resultCount" class="result-count"></div>
             <div id="resultsTable"></div>
@@ -257,10 +246,6 @@
 
     <script>
         let proteinData = [];
-        let columnNames = {
-            protein1: null,
-            protein2: null
-        };
         
         // Load the TSV file
         async function loadData() {
@@ -270,90 +255,29 @@
                 const lines = text.split('\n');
                 
                 // Parse TSV
-                const headers = lines[0].split('\t').map(h => h.trim());
-                console.log('TSV Headers:', headers);
-                
-                // Try to detect protein column names
-                detectProteinColumns(headers);
-                
+                const headers = lines[0].split('\t');
                 proteinData = lines.slice(1)
                     .filter(line => line.trim())
                     .map(line => {
                         const values = line.split('\t');
                         const obj = {};
                         headers.forEach((header, index) => {
-                            obj[header] = values[index]?.trim() || '';
+                            obj[header.trim()] = values[index]?.trim() || '';
                         });
                         return obj;
                     });
                 
                 console.log('Data loaded:', proteinData.length, 'interactions');
-                console.log('Sample data:', proteinData[0]);
-                console.log('Detected protein columns:', columnNames);
+                console.log('Column headers:', Object.keys(proteinData[0] || {}));
             } catch (error) {
                 console.error('Error loading data:', error);
                 showMessage('Error loading data file. Please ensure candidate_predictions_combined.tsv is in the same directory.', 'error');
             }
         }
 
-        // Detect which columns contain protein identifiers
-        function detectProteinColumns(headers) {
-            // Common patterns for protein columns
-            const patterns = [
-                /protein.*1/i,
-                /protein.*a/i,
-                /interactor.*1/i,
-                /interactor.*a/i,
-                /uniprot.*1/i,
-                /uniprot.*a/i,
-                /gene.*1/i,
-                /gene.*a/i,
-                /id.*1/i,
-                /id.*a/i
-            ];
-
-            const patterns2 = [
-                /protein.*2/i,
-                /protein.*b/i,
-                /interactor.*2/i,
-                /interactor.*b/i,
-                /uniprot.*2/i,
-                /uniprot.*b/i,
-                /gene.*2/i,
-                /gene.*b/i,
-                /id.*2/i,
-                /id.*b/i
-            ];
-
-            // Find first protein column
-            for (let header of headers) {
-                if (patterns.some(p => p.test(header))) {
-                    columnNames.protein1 = header;
-                    break;
-                }
-            }
-
-            // Find second protein column
-            for (let header of headers) {
-                if (patterns2.some(p => p.test(header))) {
-                    columnNames.protein2 = header;
-                    break;
-                }
-            }
-
-            // Fallback: use first two columns if not detected
-            if (!columnNames.protein1 && headers.length > 0) {
-                columnNames.protein1 = headers[0];
-            }
-            if (!columnNames.protein2 && headers.length > 1) {
-                columnNames.protein2 = headers[1];
-            }
-        }
-
         // Convert gene name to UniProt ID using UniProt API
         async function geneToUniProt(geneName) {
             try {
-                // UniProt REST API endpoint
                 const url = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_id:9606&format=json&size=5`;
                 
                 const response = await fetch(url);
@@ -364,7 +288,6 @@
                 const data = await response.json();
                 
                 if (data.results && data.results.length > 0) {
-                    // Return the primary accession (UniProt ID) of the first result
                     const uniprotId = data.results[0].primaryAccession;
                     const geneName = data.results[0].genes?.[0]?.geneName?.value || '';
                     const proteinName = data.results[0].proteinDescription?.recommendedName?.fullName?.value || '';
@@ -384,32 +307,23 @@
             }
         }
 
-        // Check if input is already a UniProt ID (basic pattern matching)
+        // Check if input is already a UniProt ID
         function isUniProtID(input) {
-            // UniProt IDs are typically 6-10 characters, alphanumeric
             const uniprotPattern = /^[OPQ][0-9][A-Z0-9]{3}[0-9]$|^[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}$/;
             return uniprotPattern.test(input.toUpperCase());
         }
 
-        // Create UniProt link
-        function createUniProtLink(uniprotId) {
-            if (!uniprotId) return 'N/A';
-            return `<a href="https://www.uniprot.org/uniprotkb/${uniprotId}" target="_blank" class="uniprot-link">${uniprotId}<span class="external-icon">↗</span></a>`;
+        // Check if a string looks like a UniProt ID (for linking in results)
+        function looksLikeUniProtID(str) {
+            if (!str || str.length < 6 || str.length > 10) return false;
+            const uniprotPattern = /^[A-Z][0-9][A-Z0-9]{3,8}$/;
+            return uniprotPattern.test(str.toUpperCase());
         }
 
-        // Show debug info
-        function showDebugInfo(searchTerm, searchId, resultsCount) {
-            const debugDiv = document.getElementById('debugInfo');
-            debugDiv.innerHTML = `
-                <div class="debug-info">
-                    <strong>Debug Info:</strong><br>
-                    Search term: ${searchTerm}<br>
-                    Searching for: ${searchId}<br>
-                    Protein columns: ${columnNames.protein1} and ${columnNames.protein2}<br>
-                    Total rows in dataset: ${proteinData.length}<br>
-                    Matches found: ${resultsCount}
-                </div>
-            `;
+        // Create UniProt link
+        function createUniProtLink(uniprotId) {
+            if (!uniprotId || !looksLikeUniProtID(uniprotId)) return uniprotId || 'N/A';
+            return `<a href="https://www.uniprot.org/uniprotkb/${uniprotId}" target="_blank" class="uniprot-link">${uniprotId}<span class="external-icon">↗</span></a>`;
         }
 
         // Search function
@@ -434,18 +348,18 @@
             document.getElementById('resultsTable').innerHTML = '<div class="loading"><div class="spinner"></div>Loading results...</div>';
             document.getElementById('messageBox').innerHTML = '';
             document.getElementById('geneInfo').innerHTML = '';
-            document.getElementById('debugInfo').innerHTML = '';
 
-            let searchUniProtId = searchTerm.toUpperCase();
+            // Start with original search term
+            let searchId = searchTerm;
             let geneInfo = null;
 
             // If not a UniProt ID, try to convert gene name to UniProt ID
             if (!isUniProtID(searchTerm)) {
-                showMessage('Looking up UniProt ID for gene: ' + searchTerm, 'info');
+                showMessage('Looking up UniProt ID for gene: ' + searchTerm + '...', 'info');
                 geneInfo = await geneToUniProt(searchTerm);
                 
                 if (geneInfo.found) {
-                    searchUniProtId = geneInfo.uniprotId;
+                    searchId = geneInfo.uniprotId;
                     document.getElementById('geneInfo').innerHTML = `
                         <div class="gene-info">
                             <strong>Gene Found:</strong> ${geneInfo.geneName} → 
@@ -457,49 +371,48 @@
                     `;
                     showMessage(`Gene "${searchTerm}" mapped to UniProt ID: ${geneInfo.uniprotId}`, 'success');
                 } else {
-                    showMessage(`Could not find UniProt ID for gene "${searchTerm}". Trying to search with original term...`, 'error');
-                    searchUniProtId = searchTerm.toUpperCase();
+                    // If gene lookup fails, continue with original term
+                    showMessage(`Could not find UniProt ID for gene "${searchTerm}". Searching with original term...`, 'info');
                 }
             }
 
-            // Search in the data - more flexible matching
+            // Search in the data - SIMPLE case-insensitive search across ALL columns
+            const searchLower = searchId.toLowerCase();
             const results = proteinData.filter(row => {
-                const protein1 = (row[columnNames.protein1] || '').toUpperCase();
-                const protein2 = (row[columnNames.protein2] || '').toUpperCase();
-                
-                // Match exact or partial
-                return protein1.includes(searchUniProtId) || 
-                       protein2.includes(searchUniProtId) ||
-                       protein1 === searchUniProtId ||
-                       protein2 === searchUniProtId;
+                // Search through all values in the row
+                return Object.values(row).some(value => {
+                    if (!value) return false;
+                    return value.toLowerCase().includes(searchLower);
+                });
             });
 
-            showDebugInfo(searchTerm, searchUniProtId, results.length);
-            displayResults(results);
+            console.log('Search term:', searchId);
+            console.log('Results found:', results.length);
+            
+            displayResults(results, searchId);
 
             searchButton.disabled = false;
             searchButton.textContent = 'Search';
         }
 
         // Display results
-        function displayResults(results) {
+        function displayResults(results, searchTerm) {
             const resultCount = document.getElementById('resultCount');
             const resultsTable = document.getElementById('resultsTable');
 
             if (results.length === 0) {
-                resultsTable.innerHTML = '<div class="no-results">No interactions found for this protein.</div>';
+                resultsTable.innerHTML = `<div class="no-results">No interactions found for "${searchTerm}".</div>`;
                 resultCount.textContent = '';
                 return;
             }
 
-            resultCount.textContent = `Found ${results.length} interaction${results.length > 1 ? 's' : ''}`;
+            resultCount.textContent = `Found ${results.length} interaction${results.length > 1 ? 's' : ''} for "${searchTerm}"`;
 
             // Get column headers from first result
             const headers = Object.keys(results[0]);
 
             let tableHTML = '<table><thead><tr>';
             headers.forEach(header => {
-                // Make headers more readable
                 const displayHeader = header.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                 tableHTML += `<th>${displayHeader}</th>`;
             });
@@ -510,8 +423,8 @@
                 headers.forEach(header => {
                     let value = row[header];
                     
-                    // If column is one of the protein columns and looks like a UniProt ID, make it clickable
-                    if ((header === columnNames.protein1 || header === columnNames.protein2) && value) {
+                    // Try to make UniProt IDs clickable
+                    if (value && looksLikeUniProtID(value)) {
                         value = createUniProtLink(value);
                     }
                     
