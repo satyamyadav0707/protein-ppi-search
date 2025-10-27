@@ -254,23 +254,30 @@
                 const text = await response.text();
                 const lines = text.split('\n');
                 
+                // Filter out comment lines (starting with #) and empty lines
+                const dataLines = lines.filter(line => {
+                    const trimmed = line.trim();
+                    return trimmed && !trimmed.startsWith('#');
+                });
+                
                 // Parse TSV
-                const headers = lines[0].split('\t');
-                proteinData = lines.slice(1)
+                const headers = dataLines[0].split('\t').map(h => h.trim());
+                proteinData = dataLines.slice(1)
                     .filter(line => line.trim())
                     .map(line => {
                         const values = line.split('\t');
                         const obj = {};
                         headers.forEach((header, index) => {
-                            obj[header.trim()] = values[index]?.trim() || '';
+                            obj[header] = values[index]?.trim() || '';
                         });
                         return obj;
                     });
                 
-                console.log('Data loaded:', proteinData.length, 'interactions');
-                console.log('Column headers:', Object.keys(proteinData[0] || {}));
+                console.log('✅ Data loaded:', proteinData.length, 'interactions');
+                console.log('✅ Columns:', headers);
+                console.log('✅ Sample row:', proteinData[0]);
             } catch (error) {
-                console.error('Error loading data:', error);
+                console.error('❌ Error loading data:', error);
                 showMessage('Error loading data file. Please ensure candidate_predictions_combined.tsv is in the same directory.', 'error');
             }
         }
@@ -349,7 +356,6 @@
             document.getElementById('messageBox').innerHTML = '';
             document.getElementById('geneInfo').innerHTML = '';
 
-            // Start with original search term
             let searchId = searchTerm;
             let geneInfo = null;
 
@@ -364,30 +370,32 @@
                         <div class="gene-info">
                             <strong>Gene Found:</strong> ${geneInfo.geneName} → 
                             <a href="https://www.uniprot.org/uniprotkb/${geneInfo.uniprotId}" target="_blank" class="uniprot-link">
-                                ${geneInfo.uniprotId}<span class="external-icon">↗</span>
-                            </a><br>
+                                ${geneInfo.uniprotId}<span class="external-icon">↗</span></a><br>
                             <strong>Protein:</strong> ${geneInfo.proteinName}
                         </div>
                     `;
                     showMessage(`Gene "${searchTerm}" mapped to UniProt ID: ${geneInfo.uniprotId}`, 'success');
                 } else {
-                    // If gene lookup fails, continue with original term
                     showMessage(`Could not find UniProt ID for gene "${searchTerm}". Searching with original term...`, 'info');
                 }
             }
 
-            // Search in the data - SIMPLE case-insensitive search across ALL columns
-            const searchLower = searchId.toLowerCase();
+            // Search in the data - check Protein1, Protein2, Name1, Name2 columns
+            const searchUpper = searchId.toUpperCase();
             const results = proteinData.filter(row => {
-                // Search through all values in the row
-                return Object.values(row).some(value => {
-                    if (!value) return false;
-                    return value.toLowerCase().includes(searchLower);
-                });
+                const protein1 = (row.Protein1 || '').toUpperCase();
+                const protein2 = (row.Protein2 || '').toUpperCase();
+                const name1 = (row.Name1 || '').toUpperCase();
+                const name2 = (row.Name2 || '').toUpperCase();
+                
+                return protein1 === searchUpper || 
+                       protein2 === searchUpper ||
+                       name1 === searchUpper ||
+                       name2 === searchUpper;
             });
 
-            console.log('Search term:', searchId);
-            console.log('Results found:', results.length);
+            console.log('🔍 Searching for:', searchId);
+            console.log('📊 Results found:', results.length);
             
             displayResults(results, searchId);
 
@@ -423,8 +431,8 @@
                 headers.forEach(header => {
                     let value = row[header];
                     
-                    // Try to make UniProt IDs clickable
-                    if (value && looksLikeUniProtID(value)) {
+                    // Make Protein1 and Protein2 clickable
+                    if ((header === 'Protein1' || header === 'Protein2') && value) {
                         value = createUniProtLink(value);
                     }
                     
