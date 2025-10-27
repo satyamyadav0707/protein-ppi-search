@@ -6,7 +6,7 @@ This is a web-based search tool for protein-protein interactions.
 
 1. Create a new GitHub repository
 2. Upload these files:
-   - index(1).html
+   - index.html
    - candidate_predictions_combined.tsv
 3. Go to Settings > Pages
 4. Select "main" branch as source
