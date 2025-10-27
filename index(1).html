@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protein-Protein Interaction Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .search-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #searchButton {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #searchButton:hover {
+            transform: translateY(-2px);
+        }
+
+        #searchButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            padding: 30px;
+        }
+
+        .result-count {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .uniprot-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .uniprot-link:hover {
+            background-color: #e8eaf6;
+            text-decoration: underline;
+        }
+
+        .external-icon {
+            font-size: 0.8em;
+            margin-left: 3px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 18px;
+        }
+
+        .error-message {
+            background-color: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+        }
+
+        .success-message {
+            background-color: #efe;
+            color: #3a3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3a3;
+        }
+
+        .gene-info {
+            background-color: #e8eaf6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .gene-info strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Protein-Protein Interaction Search</h1>
+            <p>Search by Gene Name or UniProt ID</p>
+        </div>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Enter gene name (e.g., TP53, BRCA1) or UniProt ID (e.g., P04637)"
+                    autocomplete="off"
+                />
+                <button id="searchButton">Search</button>
+            </div>
+            <div class="info-text">
+                💡 Tip: You can search using either gene names (like TP53) or UniProt IDs (like P04637). 
+                The tool will automatically convert gene names to UniProt IDs.
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display:none;">
+            <div id="messageBox"></div>
+            <div id="geneInfo"></div>
+            <div id="resultCount" class="result-count"></div>
+            <div id="resultsTable"></div>
+        </div>
+    </div>
+
+    <script>
+        let proteinData = [];
+        
+        // Load the TSV file
+        async function loadData() {
+            try {
+                const response = await fetch('candidate_predictions_combined.tsv');
+                const text = await response.text();
+                const lines = text.split('\n');
+                
+                // Parse TSV
+                const headers = lines[0].split('\t');
+                proteinData = lines.slice(1)
+                    .filter(line => line.trim())
+                    .map(line => {
+                        const values = line.split('\t');
+                        const obj = {};
+                        headers.forEach((header, index) => {
+                            obj[header.trim()] = values[index]?.trim() || '';
+                        });
+                        return obj;
+                    });
+                
+                console.log('Data loaded:', proteinData.length, 'interactions');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showMessage('Error loading data file. Please ensure candidate_predictions_combined.tsv is in the same directory.', 'error');
+            }
+        }
+
+        // Convert gene name to UniProt ID using UniProt API
+        async function geneToUniProt(geneName) {
+            try {
+                // UniProt REST API endpoint
+                const url = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_id:9606&format=json&size=5`;
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('UniProt API request failed');
+                }
+                
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    // Return the primary accession (UniProt ID) of the first result
+                    const uniprotId = data.results[0].primaryAccession;
+                    const geneName = data.results[0].genes?.[0]?.geneName?.value || '';
+                    const proteinName = data.results[0].proteinDescription?.recommendedName?.fullName?.value || '';
+                    
+                    return {
+                        uniprotId: uniprotId,
+                        geneName: geneName,
+                        proteinName: proteinName,
+                        found: true
+                    };
+                }
+                
+                return { found: false };
+            } catch (error) {
+                console.error('Error fetching from UniProt:', error);
+                return { found: false, error: error.message };
+            }
+        }
+
+        // Check if input is already a UniProt ID (basic pattern matching)
+        function isUniProtID(input) {
+            // UniProt IDs are typically 6-10 characters, alphanumeric
+            // Primary pattern: [OPQ][0-9][A-Z0-9]{3}[0-9] or [A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}
+            const uniprotPattern = /^[OPQ][0-9][A-Z0-9]{3}[0-9]$|^[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}$/;
+            return uniprotPattern.test(input.toUpperCase());
+        }
+
+        // Create UniProt link
+        function createUniProtLink(uniprotId) {
+            if (!uniprotId) return 'N/A';
+            return `<a href="https://www.uniprot.org/uniprotkb/${uniprotId}" target="_blank" class="uniprot-link">${uniprotId}<span class="external-icon">↗</span></a>`;
+        }
+
+        // Search function
+        async function searchProtein() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            
+            if (!searchTerm) {
+                showMessage('Please enter a gene name or UniProt ID', 'error');
+                return;
+            }
+
+            const searchButton = document.getElementById('searchButton');
+            searchButton.disabled = true;
+            searchButton.textContent = 'Searching...';
+
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('resultsTable').innerHTML = '<div class="loading"><div class="spinner"></div>Loading results...</div>';
+            document.getElementById('messageBox').innerHTML = '';
+            document.getElementById('geneInfo').innerHTML = '';
+
+            let searchUniProtId = searchTerm.toUpperCase();
+            let geneInfo = null;
+
+            // If not a UniProt ID, try to convert gene name to UniProt ID
+            if (!isUniProtID(searchTerm)) {
+                showMessage('Looking up UniProt ID for gene: ' + searchTerm, 'info');
+                geneInfo = await geneToUniProt(searchTerm);
+                
+                if (geneInfo.found) {
+                    searchUniProtId = geneInfo.uniprotId;
+                    document.getElementById('geneInfo').innerHTML = `
+                        <div class="gene-info">
+                            <strong>Gene Found:</strong> ${geneInfo.geneName} → 
+                            <a href="https://www.uniprot.org/uniprotkb/${geneInfo.uniprotId}" target="_blank" class="uniprot-link">
+                                ${geneInfo.uniprotId}<span class="external-icon">↗</span>
+                            </a><br>
+                            <strong>Protein:</strong> ${geneInfo.proteinName}
+                        </div>
+                    `;
+                    showMessage(`Gene "${searchTerm}" mapped to UniProt ID: ${geneInfo.uniprotId}`, 'success');
+                } else {
+                    showMessage(`Could not find UniProt ID for gene "${searchTerm}". Searching with original term...`, 'error');
+                }
+            }
+
+            // Search in the data
+            const results = proteinData.filter(row => {
+                const protein1 = row.protein1?.toUpperCase() || '';
+                const protein2 = row.protein2?.toUpperCase() || '';
+                return protein1.includes(searchUniProtId) || protein2.includes(searchUniProtId);
+            });
+
+            displayResults(results);
+
+            searchButton.disabled = false;
+            searchButton.textContent = 'Search';
+        }
+
+        // Display results
+        function displayResults(results) {
+            const resultCount = document.getElementById('resultCount');
+            const resultsTable = document.getElementById('resultsTable');
+
+            if (results.length === 0) {
+                resultsTable.innerHTML = '<div class="no-results">No interactions found for this protein.</div>';
+                resultCount.textContent = '';
+                return;
+            }
+
+            resultCount.textContent = `Found ${results.length} interaction${results.length > 1 ? 's' : ''}`;
+
+            // Get column headers from first result
+            const headers = Object.keys(results[0]);
+
+            let tableHTML = '<table><thead><tr>';
+            headers.forEach(header => {
+                // Make headers more readable
+                const displayHeader = header.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                tableHTML += `<th>${displayHeader}</th>`;
+            });
+            tableHTML += '</tr></thead><tbody>';
+
+            results.forEach(row => {
+                tableHTML += '<tr>';
+                headers.forEach(header => {
+                    let value = row[header];
+                    
+                    // If column contains UniProt IDs, make them clickable
+                    if (header.toLowerCase().includes('protein') && value) {
+                        value = createUniProtLink(value);
+                    }
+                    
+                    tableHTML += `<td>${value}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table>';
+            resultsTable.innerHTML = tableHTML;
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const messageBox = document.getElementById('messageBox');
+            const className = type === 'error' ? 'error-message' : 
+                             type === 'success' ? 'success-message' : 
+                             'gene-info';
+            messageBox.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        // Event listeners
+        document.getElementById('searchButton').addEventListener('click', searchProtein);
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchProtein();
+            }
+        });
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>
