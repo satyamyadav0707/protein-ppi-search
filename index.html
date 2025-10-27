@@ -180,7 +180,8 @@
             padding: 15px 12px;
             text-align: left;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
+            white-space: nowrap;
         }
 
         td {
@@ -331,7 +332,7 @@
                     return trimmed && !trimmed.startsWith('#');
                 });
                 
-                // Parse TSV
+                // Parse TSV - keep exact column names as they are
                 const headers = dataLines[0].split('\t').map(h => h.trim());
                 proteinData = dataLines.slice(1)
                     .filter(line => line.trim())
@@ -520,14 +521,14 @@
                 for UniProt ID: <strong>${searchUniProtId}</strong>
             `;
 
-            // Get column headers from first result
+            // Get column headers from first result - USE EXACT NAMES FROM TSV
             const headers = Object.keys(results[0]);
 
-            // Create table
+            // Create table with exact column names
             let tableHTML = '<table><thead><tr>';
             headers.forEach(header => {
-                const displayHeader = header.replace(/([A-Z])/g, ' $1').trim();
-                tableHTML += `<th>${displayHeader}</th>`;
+                // Keep the exact column name as it is in the TSV file
+                tableHTML += `<th>${header}</th>`;
             });
             tableHTML += '</tr></thead><tbody>';
 
